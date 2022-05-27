@@ -14,16 +14,6 @@ module.exports = class PriceType extends Sequelize.Model {
           allowNull: false,
           unique: false,
         },
-        max: {
-          type: Sequelize.INTEGER,
-          allowNull: false,
-          unique: false,
-        },
-        now: {
-          type: Sequelize.INTEGER,
-          allowNull: false,
-          unique: false,
-        },
       },
       {
         sequelize,
@@ -39,7 +29,6 @@ module.exports = class PriceType extends Sequelize.Model {
   }
 
   static associate(db) {
-    db.PriceType.belongsTo(db.Concert);
     db.PriceType.belongsTo(db.Ticket);
   }
 };

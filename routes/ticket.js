@@ -6,8 +6,6 @@ dotenv.config();
 const db = require('../models');
 const { isLoggedIn } = require('./middlewares');
 
-const { Op } = require('sequelize');
-
 const router = express.Router();
 
 router.get('/:ticketId', isLoggedIn, async (req, res, next) => {
@@ -15,6 +13,7 @@ router.get('/:ticketId', isLoggedIn, async (req, res, next) => {
   try {
     const ticket = await db.Ticket.findOne({
       where: { id: ticketId },
+      include: [{ model: db.PriceType }],
     });
     if (ticket.UserId === req.user.id) {
       return res.json({
@@ -26,37 +25,6 @@ router.get('/:ticketId', isLoggedIn, async (req, res, next) => {
         message: `권한이 없습니다.`,
       });
     }
-  } catch (e) {
-    console.log(e);
-    next(e);
-  }
-});
-
-router.get('/list/:preview', isLoggedIn, async (req, res, next) => {
-  const { preview } = req.params;
-  try {
-    let tickets;
-    if (preview) {
-      tickets = await db.Ticket.findAll({
-        limit: 5,
-        where: {
-          UserId: req.user.id,
-          sale: { [Op.not]: true },
-        },
-      });
-    } else {
-      tickets = await db.Ticket.findAll({
-        where: {
-          UserId: req.user.id,
-          sale: { [Op.not]: true },
-        },
-      });
-    }
-
-    return res.json({
-      message: '유저가 예매한 티켓리스트입니다.',
-      payload: tickets,
-    });
   } catch (e) {
     console.log(e);
     next(e);

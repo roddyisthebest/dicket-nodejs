@@ -86,20 +86,18 @@ router.post('/', isLoggedIn, async (req, res, next) => {
       seatImg,
     });
     seatInfo.map(async (e) => {
-      const priceType = await db.PriceType.create({
-        ConcertId: newConcert.id,
-        type: e.type,
-        price: e.price,
-        max: e.max,
-      });
       for (let i = 0; i < e.max; i++) {
-        await db.Ticket.create({
+        const ticket = await db.Ticket.create({
           tokenId: tokenIds.shift(),
-          PriceTypeId: priceType.id,
           seat: i,
           address,
           ConcertId: newConcert.id,
           UserId: req.user.id,
+        });
+        await db.PriceType.create({
+          type: e.type,
+          price: e.price,
+          TicketId: ticket.id,
         });
       }
     });
@@ -182,7 +180,14 @@ router.get('/:id', isLoggedIn, async (req, res, next) => {
   try {
     const concert = db.Concert.findOne({
       where: { id },
-      include: [{ model: db.User, attributes: ['address', 'userId', 'img'] }],
+      include: [
+        { model: db.User, attributes: ['address', 'userId', 'img'] },
+        {
+          model: db.Ticket,
+          where: { sale: true },
+          include: [{ model: db.PriceType }],
+        },
+      ],
     });
     return res.json({ message: '콘서트 정보입니다.', payload: concert });
   } catch (e) {
