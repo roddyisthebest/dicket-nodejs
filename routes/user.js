@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const passport = require('passport');
+const md5 = require('md5');
 
 const dotenv = require('dotenv');
 dotenv.config();
@@ -41,8 +42,8 @@ router.post('/signup', isNotLoggedIn, async (req, res, next) => {
       message: '유저가 등록되었습니다.',
     });
   } catch (err) {
-    console.log(e);
-    return next(e);
+    console.log(err);
+    return next(err);
   }
 });
 
@@ -63,57 +64,53 @@ router.post('/signin', isNotLoggedIn, async (req, res, next) => {
       const fullUser = await db.User.findOne({
         where: { id: user.id },
         attributes: ['id', 'userId', 'img', 'address'],
-        include: [
-          {
-            model: db.Concert,
-            attributes: ['id'],
-          },
-          {
-            model: db.Ticket,
-            attributes: ['id', 'price'],
-          },
-        ],
       });
       return res.json(fullUser);
     });
   })(req, res, next);
 });
 
-router.post('/logout', isLoggedIn, (req, res) => {
-  if (req.isAuthenticated()) {
-    req.logout();
-    req.session.destroy(); // 선택사항
-    return res.send({
-      code: 200,
-      message: '로그아웃 되었습니다.',
-    });
+router.post('/logout', isLoggedIn, (req, res, next) => {
+  try {
+    if (req.isAuthenticated()) {
+      req.logout();
+
+      req.session.destroy(); // 선택사항
+      return res.send({
+        code: 200,
+        message: '로그아웃 되었습니다.',
+      });
+    }
+  } catch (e) {
+    console.log(e);
+    next(e);
   }
 });
 
-router.get('/concert/:preview', isLoggedIn, async (req, res, next) => {
+router.get('/concerts/:preview', isLoggedIn, async (req, res, next) => {
   const { preview } = req.params;
   try {
-    let user;
-
-    if (preview) {
-      user = await db.User.findOne({
-        include: [{ model: db.Concert, limit: 5, separate: true }],
-        where: {
-          id: req.user.id,
-        },
-      });
+    let concerts;
+    let message;
+    const usersConcert = await db.Concert.findAll({
+      where: {
+        bossUserId: req.user.id,
+      },
+    });
+    if (preview === 'true') {
+      if (usersConcert.length >= 5) {
+        concerts = usersConcert.slice(0, 4);
+      }
+      concerts = usersConcert;
+      message = '유저가 등록한 5개이하의 콘서트 목록입니다.';
     } else {
-      user = await db.User.findOne({
-        include: [{ model: db.Concert }],
-        where: {
-          id: req.user.id,
-        },
-      });
+      concerts = usersConcert;
+      message = '유저가 등록한 콘서트 목록입니다.';
     }
 
     return res.json({
-      message: '유저가 등록한 콘서트 목록입니다.',
-      payload: user.Concert,
+      message,
+      payload: concerts,
     });
   } catch (e) {
     console.log(e);
@@ -121,11 +118,12 @@ router.get('/concert/:preview', isLoggedIn, async (req, res, next) => {
   }
 });
 
-router.get('/ticket/:preview', isLoggedIn, async (req, res, next) => {
+router.get('/tickets/:preview', isLoggedIn, async (req, res, next) => {
   const { preview } = req.params;
   try {
     let tickets;
-    if (preview) {
+    let message;
+    if (preview === 'true') {
       tickets = await db.Ticket.findAll({
         limit: 5,
         where: {
@@ -134,6 +132,7 @@ router.get('/ticket/:preview', isLoggedIn, async (req, res, next) => {
         },
         include: [{ model: db.PriceType }],
       });
+      message = '유저가 예매한 5개 이하의 티켓리스트입니다.';
     } else {
       tickets = await db.Ticket.findAll({
         where: {
@@ -142,10 +141,11 @@ router.get('/ticket/:preview', isLoggedIn, async (req, res, next) => {
         },
         include: [{ model: db.PriceType }],
       });
+      message = '유저가 예매한 티켓리스트입니다.';
     }
 
     return res.json({
-      message: '유저가 예매한 티켓리스트입니다.',
+      message,
       payload: tickets,
     });
   } catch (e) {
@@ -153,4 +153,5 @@ router.get('/ticket/:preview', isLoggedIn, async (req, res, next) => {
     next(e);
   }
 });
+
 module.exports = router;

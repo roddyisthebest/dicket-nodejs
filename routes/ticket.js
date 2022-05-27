@@ -32,21 +32,32 @@ router.get('/:ticketId', isLoggedIn, async (req, res, next) => {
 });
 
 router.post('/', isLoggedIn, async (req, res, next) => {
-  const { concertId, ticketId, address } = req;
+  const { concertId, ticketId } = req.body;
 
   try {
-    await db.Concert.increment({ now: 1 }, { where: { id: concertId } });
+    const ticket = await db.Ticket.findOne({ where: { id: ticketId } });
+
+    if (ticket.UserId === req.user.id) {
+      return res
+        .status(403)
+        .json({ message: '이미 티켓의 주인입니다. 거래 불가능합니다.' });
+    }
+    await db.Concert.increment(
+      { now: 1 },
+      { where: { id: parseInt(concertId, 10) } }
+    );
 
     await db.Ticket.update(
       {
-        address,
+        address: req.user.address,
         UserId: req.user.id,
         sale: false,
       },
-      { where: { id: ticketId } }
+      { where: { id: parseInt(ticketId, 10) } }
     );
 
     const concert = await db.Concert.findOne({ where: { id: concertId } });
+    concert.addConcertUser(parseInt(req.user.id, 10));
     if (concert.max === concert.now) {
       await db.Concert.update({ status: false }, { where: { id: concert.id } });
     }

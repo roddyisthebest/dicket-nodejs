@@ -24,8 +24,8 @@ module.exports = class Concert extends Sequelize.Model {
           allowNull: false,
           unique: false,
         },
-        durationTime: {
-          type: Sequelize.STRING(50),
+        endTime: {
+          type: Sequelize.INTEGER,
           allowNull: false,
           unique: false,
         },
@@ -62,6 +62,10 @@ module.exports = class Concert extends Sequelize.Model {
           allowNull: true,
           defaultValue: true,
         },
+        bossUserId: {
+          type: Sequelize.INTEGER,
+          allowNull: false,
+        },
       },
       {
         sequelize,
@@ -77,10 +81,10 @@ module.exports = class Concert extends Sequelize.Model {
   }
 
   static associate(db) {
-    db.Concert.hasMany(db.PriceType);
     db.Concert.hasMany(db.Ticket);
     db.Concert.belongsToMany(db.User, {
       through: 'user_concert',
+      as: 'ConcertUsers',
     });
   }
 };

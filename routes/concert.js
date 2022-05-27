@@ -63,7 +63,7 @@ router.post('/', isLoggedIn, async (req, res, next) => {
     location,
     date,
     startTime,
-    durationTime,
+    endTime,
     age,
     max,
     concertImg,
@@ -71,7 +71,7 @@ router.post('/', isLoggedIn, async (req, res, next) => {
     seatInfo,
     tokenIds,
     address,
-  } = req;
+  } = req.body;
 
   try {
     const newConcert = await db.Concert.create({
@@ -79,16 +79,21 @@ router.post('/', isLoggedIn, async (req, res, next) => {
       location,
       date,
       startTime,
-      durationTime,
+      endTime,
       age,
       max,
       concertImg,
       seatImg,
+      bossUserId: req.user.id,
     });
-    seatInfo.map(async (e) => {
+    const user = await db.User.findOne({ where: { id: req.user.id } });
+    await user.addUserConcert(parseInt(newConcert.id, 10));
+    const seatInfomation = JSON.parse(seatInfo);
+    const tokens = JSON.parse(tokenIds);
+    seatInfomation.map(async (e) => {
       for (let i = 0; i < e.max; i++) {
         const ticket = await db.Ticket.create({
-          tokenId: tokenIds.shift(),
+          tokenId: tokens.shift(),
           seat: i,
           address,
           ConcertId: newConcert.id,
@@ -105,29 +110,29 @@ router.post('/', isLoggedIn, async (req, res, next) => {
     return res.json({ code: 200, message: '등록이 완료되었습니다.' });
   } catch (e) {
     console.log(e);
+    next(e);
   }
 });
 
 router.put('/', isLoggedIn, async (req, res, next) => {
-  const {
-    title,
-    location,
-    date,
-    startTime,
-    durationTime,
-    age,
-    concertImg,
-    id,
-  } = req;
+  const { title, location, date, startTime, endTime, age, concertImg, id } =
+    req.body;
   try {
     var isItConstrainter = false;
     const user = await db.User.findOne({
       where: { id: req.user.id },
-      include: [{ model: db.Concert, attributes: ['id'] }],
+      include: [
+        {
+          model: db.Concert,
+          attributes: ['id'],
+          as: 'UserConcerts',
+          through: { attributes: [] },
+        },
+      ],
     });
 
-    user.Concert.map((e) => {
-      if (e.id === id) {
+    user.UserConcerts.map((e) => {
+      if (e.id === parseInt(id, 10)) {
         isItConstrainter = true;
       }
     });
@@ -137,7 +142,7 @@ router.put('/', isLoggedIn, async (req, res, next) => {
     }
 
     await db.Concert.update(
-      { title, location, date, startTime, durationTime, age, concertImg },
+      { title, location, date, startTime, endTime, age, concertImg },
       { where: { id } }
     );
 
@@ -151,7 +156,7 @@ router.get('/list/:preview', isLoggedIn, async (req, res, next) => {
   const { preview } = req.params;
   try {
     let concerts;
-    if (preview) {
+    if (preview === 'true') {
       concerts = await db.Concert.findAll({
         limit: 6,
         where: {
@@ -178,14 +183,17 @@ router.get('/list/:preview', isLoggedIn, async (req, res, next) => {
 router.get('/:id', isLoggedIn, async (req, res, next) => {
   const { id } = req.params;
   try {
-    const concert = db.Concert.findOne({
-      where: { id },
+    const concert = await db.Concert.findOne({
+      where: { id: parseInt(id, 10) },
       include: [
-        { model: db.User, attributes: ['address', 'userId', 'img'] },
         {
           model: db.Ticket,
-          where: { sale: true },
           include: [{ model: db.PriceType }],
+        },
+        {
+          model: db.User,
+          as: 'ConcertUsers',
+          through: { attributes: [] },
         },
       ],
     });

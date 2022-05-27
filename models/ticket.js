@@ -14,11 +14,6 @@ module.exports = class Ticket extends Sequelize.Model {
           allowNull: false,
           unique: false,
         },
-        date: {
-          type: Sequelize.DATE,
-          allowNull: false,
-          unique: false,
-        },
         address: {
           type: Sequelize.STRING(100),
           allowNull: false,
@@ -46,6 +41,5 @@ module.exports = class Ticket extends Sequelize.Model {
 
   static associate(db) {
     db.Ticket.hasOne(db.PriceType);
-    db.Ticket.belongsTo(db.Concert);
   }
 };
