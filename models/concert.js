@@ -62,8 +62,17 @@ module.exports = class Concert extends Sequelize.Model {
           allowNull: true,
           defaultValue: true,
         },
+        full: {
+          type: Sequelize.BOOLEAN,
+          allowNull: true,
+          defaultValue: false,
+        },
         bossUserId: {
           type: Sequelize.INTEGER,
+          allowNull: false,
+        },
+        seatInfo: {
+          type: Sequelize.TEXT,
           allowNull: false,
         },
       },

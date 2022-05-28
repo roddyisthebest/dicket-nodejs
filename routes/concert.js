@@ -70,10 +70,18 @@ router.post('/', isLoggedIn, async (req, res, next) => {
     seatImg,
     seatInfo,
     tokenIds,
-    address,
   } = req.body;
 
   try {
+    const seatInfomation = JSON.parse(seatInfo);
+    const tokens = JSON.parse(tokenIds);
+
+    var seatInfoString = '';
+
+    seatInfomation.map((e) => {
+      seatInfoString += `${e.type}열 - ${e.price}원 \n`;
+    });
+
     const newConcert = await db.Concert.create({
       title,
       location,
@@ -85,17 +93,17 @@ router.post('/', isLoggedIn, async (req, res, next) => {
       concertImg,
       seatImg,
       bossUserId: req.user.id,
+      seatInfo: seatInfoString,
     });
     const user = await db.User.findOne({ where: { id: req.user.id } });
     await user.addUserConcert(parseInt(newConcert.id, 10));
-    const seatInfomation = JSON.parse(seatInfo);
-    const tokens = JSON.parse(tokenIds);
+
     seatInfomation.map(async (e) => {
       for (let i = 0; i < e.max; i++) {
         const ticket = await db.Ticket.create({
           tokenId: tokens.shift(),
           seat: i,
-          address,
+          address: req.user.address,
           ConcertId: newConcert.id,
           UserId: req.user.id,
         });
