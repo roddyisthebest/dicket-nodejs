@@ -92,6 +92,12 @@ router.delete('/:id', isLoggedIn, async (req, res, next) => {
         .json({ message: '이미 종료된 콘서트입니다. 환불이 불가능합니다.' });
     }
 
+    if (concert.bossUserId === req.user.id) {
+      return res
+        .status(403)
+        .json({ message: '티켓의 주인입니다. 환불 불가능합니다.' });
+    }
+
     if (ticket.UserId !== req.user.id) {
       return res
         .status(401)

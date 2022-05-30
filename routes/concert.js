@@ -127,23 +127,12 @@ router.put('/', isLoggedIn, async (req, res, next) => {
     req.body;
   try {
     var isItConstrainter = false;
-    const user = await db.User.findOne({
-      where: { id: req.user.id },
-      include: [
-        {
-          model: db.Concert,
-          attributes: ['id'],
-          as: 'UserConcerts',
-          through: { attributes: [] },
-        },
-      ],
+    const concert = await db.Concert.findOne({
+      where: { id },
     });
-
-    user.UserConcerts.map((e) => {
-      if (e.id === parseInt(id, 10)) {
-        isItConstrainter = true;
-      }
-    });
+    if (req.user.id === concert.bossUserId) {
+      isItConstrainter = true;
+    }
 
     if (!isItConstrainter) {
       return res.status(401).json({ message: '권한이 없습니다.' });
